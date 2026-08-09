@@ -1,0 +1,20 @@
+.resume-input {
+  width: 100%;
+  background: #1e293b;
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  outline: none;
+  border: 1px solid #334155;
+  transition: 0.3s;
+}
+
+.resume-input:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+}
+
+textarea.resume-input {
+  min-height: 100px;
+  resize: vertical;
+}

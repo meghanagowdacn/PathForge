@@ -1,0 +1,60 @@
+export const roadmaps = {
+  frontend: [
+    "HTML",
+    "CSS",
+    "JavaScript",
+    "React",
+    "Tailwind CSS",
+    "Git & GitHub",
+    "Responsive Design",
+    "Portfolio Project",
+  ],
+
+  backend: [
+    "Node.js",
+    "Express.js",
+    "MongoDB",
+    "SQL",
+    "REST APIs",
+    "JWT Authentication",
+    "Firebase",
+    "Backend Project",
+  ],
+
+  aiml: [
+    "Python",
+    "Mathematics",
+    "NumPy",
+    "Pandas",
+    "Machine Learning",
+    "Deep Learning",
+    "TensorFlow",
+    "NLP",
+    "Computer Vision",
+    "Generative AI",
+  ],
+
+  cybersecurity: [
+    "Networking",
+    "Linux",
+    "Python",
+    "Web Security",
+    "Ethical Hacking",
+    "Nmap",
+    "Wireshark",
+    "OWASP Top 10",
+    "Metasploit",
+    "Cloud Security",
+  ],
+
+  dataanalyst: [
+    "Excel",
+    "SQL",
+    "Python",
+    "Power BI",
+    "Statistics",
+    "Pandas",
+    "NumPy",
+    "Dashboard Project",
+  ],
+};
