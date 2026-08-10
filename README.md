@@ -49,3 +49,20 @@ PathForge/
 ├── docs/            # Project documentation
 ├── .gitignore
 └── README.md
+## 📸 Screenshots
+
+### Dashboard
+
+![PathForge Dashboard](docs/screenshots/dashboard.png)
+
+### Career Roadmap
+
+![PathForge Career Roadmap](docs/screenshots/roadmap.png)
+
+### Interview Prep
+
+![PathForge Interview Prep](docs/screenshots/interview-prep.png)
+
+### Resume Analyzer
+
+![PathForge Resume Analyzer](docs/screenshots/resume-analyzer.png)
