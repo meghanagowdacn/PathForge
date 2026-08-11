@@ -7,7 +7,7 @@ require("dotenv").config();
 const { db } = require("./config/firebase");
 const userRoutes = require("./routes/userroutes");
 const authRoutes = require("./routes/authroutes");
-const authenticateUser = require("./middleware/authmiddleware");
+const authenticateUser = require("./middleware/authMiddleware");
 
 const app = express();
 
