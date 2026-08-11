@@ -25,7 +25,7 @@ function TaskManager({ onTasksChanged }) {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        "http://localhost:5000/api/user/tasks",
+        "https://pathforge-4-iwk7.onrender.com/api/user/tasks",
         {
           method: "GET",
           headers: {
@@ -81,7 +81,7 @@ function TaskManager({ onTasksChanged }) {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        "http://localhost:5000/api/user/tasks",
+        "https://pathforge-4-iwk7.onrender.com/api/user/tasks",
         {
           method: "POST",
           headers: {
@@ -166,7 +166,7 @@ function TaskManager({ onTasksChanged }) {
         await user.getIdToken();
 
       const response = await fetch(
-        `http://localhost:5000/api/user/tasks/${task.id}`,
+        `https://pathforge-4-iwk7.onrender.com/api/user/tasks/${task.id}`,
         {
           method: "PUT",
           headers: {
@@ -233,7 +233,7 @@ function TaskManager({ onTasksChanged }) {
         await user.getIdToken();
 
       const response = await fetch(
-        `http://localhost:5000/api/user/tasks/${id}`,
+        `https://pathforge-4-iwk7.onrender.com/api/user/tasks/${id}`,
         {
           method: "DELETE",
           headers: {

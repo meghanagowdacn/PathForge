@@ -34,7 +34,7 @@ function Profile() {
           await user.getIdToken();
 
         const response = await fetch(
-          "http://localhost:5000/api/user/profile",
+          "https://pathforge-4-iwk7.onrender.com/api/user/profile",
           {
             method: "GET",
             headers: {
@@ -123,7 +123,7 @@ function Profile() {
         await user.getIdToken();
 
       const response = await fetch(
-        "http://localhost:5000/api/user/profile",
+        "https://pathforge-4-iwk7.onrender.com/api/user/profile",
         {
           method: "PUT",
           headers: {

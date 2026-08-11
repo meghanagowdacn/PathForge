@@ -44,7 +44,7 @@ function ProgressChart() {
         // ==========================================
 
         const projectsResponse = await fetch(
-          "http://localhost:5000/api/user/projects",
+          "https://pathforge-4-iwk7.onrender.com/api/user/projects",
           {
             method: "GET",
             headers,
@@ -59,7 +59,7 @@ function ProgressChart() {
         // ==========================================
 
         const skillsResponse = await fetch(
-          "http://localhost:5000/api/user/skills",
+          "https://pathforge-4-iwk7.onrender.com/api/user/skills",
           {
             method: "GET",
             headers,
@@ -74,7 +74,7 @@ function ProgressChart() {
         // ==========================================
 
         const tasksResponse = await fetch(
-          "http://localhost:5000/api/user/tasks",
+          "https://pathforge-4-iwk7.onrender.com/api/user/tasks",
           {
             method: "GET",
             headers,
@@ -89,7 +89,7 @@ function ProgressChart() {
         // ==========================================
 
         const roadmapResponse = await fetch(
-          "http://localhost:5000/api/user/roadmap",
+          "https://pathforge-4-iwk7.onrender.com/api/user/roadmap",
           {
             method: "GET",
             headers,

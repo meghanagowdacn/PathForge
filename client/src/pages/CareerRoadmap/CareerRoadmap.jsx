@@ -26,7 +26,7 @@ function CareerRoadmap() {
         const token = await user.getIdToken();
 
         const response = await fetch(
-          "http://localhost:5000/api/user/roadmap",
+          "https://pathforge-4-iwk7.onrender.com/api/user/roadmap",
           {
             method: "GET",
             headers: {
@@ -79,7 +79,7 @@ function CareerRoadmap() {
         const token = await user.getIdToken();
 
         const response = await fetch(
-          "http://localhost:5000/api/user/roadmap",
+          "https://pathforge-4-iwk7.onrender.com/api/user/roadmap",
           {
             method: "PUT",
             headers: {

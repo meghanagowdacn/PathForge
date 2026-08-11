@@ -40,7 +40,7 @@ function Signup() {
       console.log("AUTH OBJECT:", auth);
 
       const response = await fetch(
-        "http://localhost:5000/api/auth/signup",
+        "https://pathforge-4-iwk7.onrender.com/api/auth/signup",
         {
           method: "POST",
           headers: {

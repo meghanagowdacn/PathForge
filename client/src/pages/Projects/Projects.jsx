@@ -31,7 +31,7 @@ function Projects() {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        "http://localhost:5000/api/user/projects",
+        "https://pathforge-4-iwk7.onrender.com/api/user/projects",
         {
           method: "GET",
           headers: {
@@ -103,7 +103,7 @@ function Projects() {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        "http://localhost:5000/api/user/projects",
+        "https://pathforge-4-iwk7.onrender.com/api/user/projects",
         {
           method: "POST",
           headers: {
@@ -166,7 +166,7 @@ function Projects() {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        `http://localhost:5000/api/user/projects/${id}`,
+        `https://pathforge-4-iwk7.onrender.com/api/user/projects/${id}`,
         {
           method: "DELETE",
           headers: {

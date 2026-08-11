@@ -30,7 +30,7 @@ function Skills() {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        "http://localhost:5000/api/user/skills",
+        "https://pathforge-4-iwk7.onrender.com/api/user/skills",
         {
           method: "GET",
           headers: {
@@ -101,7 +101,7 @@ function Skills() {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        "http://localhost:5000/api/user/skills",
+        "https://pathforge-4-iwk7.onrender.com/api/user/skills",
         {
           method: "POST",
 
@@ -163,7 +163,7 @@ function Skills() {
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        `http://localhost:5000/api/user/skills/${id}`,
+        `https://pathforge-4-iwk7.onrender.com/api/user/skills/${id}`,
         {
           method: "DELETE",
 

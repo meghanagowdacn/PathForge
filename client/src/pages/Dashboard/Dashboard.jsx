@@ -41,7 +41,7 @@ function Dashboard() {
       // ==========================================
 
       const profileResponse = await fetch(
-        "http://localhost:5000/api/user/profile",
+        "https://pathforge-4-iwk7.onrender.com/api/user/profile",
         {
           method: "GET",
           headers: {
@@ -70,7 +70,7 @@ function Dashboard() {
       // ==========================================
 
       const projectsResponse = await fetch(
-        "http://localhost:5000/api/user/projects",
+        "https://pathforge-4-iwk7.onrender.com/api/user/projects",
         {
           method: "GET",
           headers: {
@@ -102,7 +102,7 @@ function Dashboard() {
       // ==========================================
 
       const skillsResponse = await fetch(
-        "http://localhost:5000/api/user/skills",
+        "https://pathforge-4-iwk7.onrender.com/api/user/skills",
         {
           method: "GET",
           headers: {
@@ -134,7 +134,7 @@ function Dashboard() {
       // ==========================================
 
       const tasksResponse = await fetch(
-        "http://localhost:5000/api/user/tasks",
+        "https://pathforge-4-iwk7.onrender.com/api/user/tasks",
         {
           method: "GET",
           headers: {
