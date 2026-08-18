@@ -1,7 +1,7 @@
-
 import { useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import { analyzeResume } from "../../utils/resumeAnalyzer";
+import { auth, db } from "../../firebase";
 
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
@@ -11,19 +11,18 @@ function AIResumeAnalyzer() {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   // ==========================================
   // EXTRACT TEXT FROM PDF
   // ==========================================
 
   const extractTextFromPDF = async (selectedFile) => {
-    const arrayBuffer =
-      await selectedFile.arrayBuffer();
+    const arrayBuffer = await selectedFile.arrayBuffer();
 
-    const pdf =
-      await pdfjsLib.getDocument({
-        data: arrayBuffer,
-      }).promise;
+    const pdf = await pdfjsLib.getDocument({
+      data: arrayBuffer,
+    }).promise;
 
     let text = "";
 
@@ -32,11 +31,9 @@ function AIResumeAnalyzer() {
       pageNumber <= pdf.numPages;
       pageNumber++
     ) {
-      const page =
-        await pdf.getPage(pageNumber);
+      const page = await pdf.getPage(pageNumber);
 
-      const content =
-        await page.getTextContent();
+      const content = await page.getTextContent();
 
       const pageText = content.items
         .map((item) => item.str)
@@ -46,6 +43,105 @@ function AIResumeAnalyzer() {
     }
 
     return text;
+  };
+
+  // ==========================================
+  // SAVE ANALYSIS TO FIREBASE
+  // ==========================================
+
+  const saveAnalysisToFirebase = async (analysis) => {
+    try {
+      setSaving(true);
+
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        throw new Error(
+          "User is not logged in. Please login again."
+        );
+      }
+
+      // Get Firebase authentication token
+      const token = await currentUser.getIdToken();
+
+      const resumeData = {
+        score:
+          typeof analysis.score === "number"
+            ? analysis.score
+            : 0,
+
+        readiness:
+          analysis.readiness || "",
+
+        foundSkills:
+          Array.isArray(analysis.foundSkills)
+            ? analysis.foundSkills
+            : [],
+
+        missingSkills:
+          Array.isArray(analysis.missingSkills)
+            ? analysis.missingSkills
+            : [],
+
+        certifications:
+          Array.isArray(analysis.certifications)
+            ? analysis.certifications
+            : [],
+
+        projects:
+          Array.isArray(analysis.projects)
+            ? analysis.projects
+            : [],
+
+        tips:
+          Array.isArray(analysis.tips)
+            ? analysis.tips
+            : [],
+      };
+
+      console.log(
+        "📤 Sending resume analysis to backend..."
+      );
+
+      const response = await fetch(
+        "http://localhost:5000/api/user/resume",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+
+          body: JSON.stringify(resumeData),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to save resume analysis"
+        );
+      }
+
+      console.log(
+        "✅ Resume analysis saved to Firebase:",
+        data
+      );
+
+      return data;
+    } catch (error) {
+      console.error(
+        "❌ Firebase resume save error:",
+        error
+      );
+
+      throw error;
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ==========================================
@@ -66,6 +162,7 @@ function AIResumeAnalyzer() {
         file.name
       );
 
+      // Extract PDF text
       const resumeText =
         await extractTextFromPDF(file);
 
@@ -73,6 +170,7 @@ function AIResumeAnalyzer() {
         alert(
           "Could not extract text from this PDF. Please upload a text-based resume PDF."
         );
+
         return;
       }
 
@@ -80,6 +178,7 @@ function AIResumeAnalyzer() {
         "✅ Resume text extracted"
       );
 
+      // Analyze resume
       const analysis =
         analyzeResume(resumeText);
 
@@ -88,51 +187,16 @@ function AIResumeAnalyzer() {
         analysis
       );
 
+      // Show result immediately
       setResult(analysis);
 
-      // ==========================================
-      // SAVE LATEST ANALYSIS
-      // ==========================================
-
-      const resumeData = {
-        score: analysis.score,
-        readiness: analysis.readiness,
-        foundSkills:
-          analysis.foundSkills || [],
-        missingSkills:
-          analysis.missingSkills || [],
-        date: new Date().toLocaleString(),
-      };
-
-      localStorage.setItem(
-        "resume",
-        JSON.stringify(resumeData)
+      // Save to Firebase
+      await saveAnalysisToFirebase(
+        analysis
       );
 
-      // ==========================================
-      // SAVE RESUME HISTORY
-      // ==========================================
-
-      const history =
-        JSON.parse(
-          localStorage.getItem(
-            "resumeHistory"
-          )
-        ) || [];
-
-      history.unshift({
-        score: analysis.score,
-        readiness: analysis.readiness,
-        date: new Date().toLocaleString(),
-      });
-
-      localStorage.setItem(
-        "resumeHistory",
-        JSON.stringify(history)
-      );
-
-      console.log(
-        "💾 Resume analysis saved"
+      alert(
+        "Resume analyzed and saved successfully!"
       );
     } catch (error) {
       console.error(
@@ -141,7 +205,8 @@ function AIResumeAnalyzer() {
       );
 
       alert(
-        "Unable to analyze resume. Please make sure you uploaded a valid PDF."
+        error.message ||
+          "Unable to analyze resume. Please make sure you uploaded a valid PDF."
       );
     } finally {
       setLoading(false);
@@ -205,6 +270,7 @@ function AIResumeAnalyzer() {
       );
 
       event.target.value = "";
+
       return;
     }
 
@@ -306,6 +372,7 @@ function AIResumeAnalyzer() {
           <div className="mt-5 bg-slate-800/70 border border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
             <div>
+
               <p className="text-gray-200 font-medium">
                 {file.name}
               </p>
@@ -316,6 +383,7 @@ function AIResumeAnalyzer() {
                 )}{" "}
                 MB
               </p>
+
             </div>
 
             <span className="text-green-400 text-sm font-semibold">
@@ -330,11 +398,17 @@ function AIResumeAnalyzer() {
         <button
           type="button"
           onClick={handleAnalyze}
-          disabled={loading || !file}
+          disabled={
+            loading ||
+            saving ||
+            !file
+          }
           className="w-full mt-5 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-bold px-6 py-3.5 rounded-xl transition"
         >
           {loading
             ? "Analyzing Resume..."
+            : saving
+            ? "Saving to Firebase..."
             : "Analyze Resume"}
         </button>
 
@@ -350,6 +424,7 @@ function AIResumeAnalyzer() {
           {/* RESULTS HEADER */}
 
           <div>
+
             <p className="text-cyan-400 text-sm font-semibold">
               ANALYSIS COMPLETE
             </p>
@@ -359,9 +434,10 @@ function AIResumeAnalyzer() {
             </h2>
 
             <p className="text-gray-500 text-sm mt-2">
-              Here is your latest resume
-              assessment.
+              Your resume analysis has been
+              saved to Firebase.
             </p>
+
           </div>
 
           {/* ==========================================
@@ -377,6 +453,7 @@ function AIResumeAnalyzer() {
               <div className="flex items-start justify-between">
 
                 <div>
+
                   <p className="text-gray-500 text-sm">
                     RESUME SCORE
                   </p>
@@ -384,6 +461,7 @@ function AIResumeAnalyzer() {
                   <h3 className="text-xl font-bold text-white mt-1">
                     Overall Strength
                   </h3>
+
                 </div>
 
                 <span className="text-2xl">
@@ -558,8 +636,7 @@ function AIResumeAnalyzer() {
                 Recommended Certifications
               </h3>
 
-              {result.certifications?.length >
-              0 ? (
+              {result.certifications?.length > 0 ? (
                 <ul className="mt-5 space-y-3">
 
                   {result.certifications.map(
@@ -571,6 +648,7 @@ function AIResumeAnalyzer() {
                         <span className="text-cyan-400 mr-2">
                           •
                         </span>
+
                         {item}
                       </li>
                     )
@@ -610,6 +688,7 @@ function AIResumeAnalyzer() {
                         <span className="text-cyan-400 mr-2">
                           •
                         </span>
+
                         {item}
                       </li>
                     )
@@ -649,6 +728,7 @@ function AIResumeAnalyzer() {
                         <span className="text-cyan-400 mr-2">
                           •
                         </span>
+
                         {item}
                       </li>
                     )
@@ -666,16 +746,18 @@ function AIResumeAnalyzer() {
           </div>
 
           {/* ==========================================
-              ANALYSIS INFO
+              FIREBASE STATUS
           ========================================== */}
 
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl px-5 py-4">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl px-5 py-4">
 
-            <p className="text-gray-500 text-sm">
-              Last analyzed:{" "}
-              <span className="text-gray-300">
-                {new Date().toLocaleString()}
-              </span>
+            <p className="text-green-400 text-sm font-semibold">
+              ✓ Resume analysis saved to Firebase
+            </p>
+
+            <p className="text-gray-400 text-sm mt-1">
+              Your latest analysis is stored in
+              your user account.
             </p>
 
           </div>

@@ -1,32 +1,54 @@
-
 import { useState, useEffect } from "react";
 import { roadmaps } from "./roadmapData";
 import { auth } from "../../firebase/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+
+const API_URL = "https://pathforge-4-iwk7.onrender.com";
 
 function CareerRoadmap() {
   const [selected, setSelected] = useState("frontend");
   const [completed, setCompleted] = useState({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState(null);
 
   // ==========================================
-  // LOAD ROADMAP PROGRESS FROM BACKEND
+  // WATCH FIREBASE LOGIN
+  // ==========================================
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+
+        if (!currentUser) {
+          setCompleted({});
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  // ==========================================
+  // LOAD ROADMAP FROM FIRESTORE
   // ==========================================
 
   useEffect(() => {
     const loadProgress = async () => {
-      try {
-        const user = auth.currentUser;
+      if (!user) {
+        return;
+      }
 
-        if (!user) {
-          console.log("❌ User is not logged in");
-          setLoading(false);
-          return;
-        }
+      try {
+        setLoading(true);
 
         const token = await user.getIdToken();
 
         const response = await fetch(
-          "https://pathforge-4-iwk7.onrender.com/api/user/roadmap",
+          `${API_URL}/api/user/roadmap`,
           {
             method: "GET",
             headers: {
@@ -37,6 +59,11 @@ function CareerRoadmap() {
 
         const data = await response.json();
 
+        console.log(
+          "📥 Roadmap loaded from Firebase:",
+          data
+        );
+
         if (!response.ok) {
           throw new Error(
             data.message ||
@@ -44,42 +71,41 @@ function CareerRoadmap() {
           );
         }
 
-        console.log(
-          "📥 Roadmap progress loaded:",
-          data
-        );
-
         setCompleted(data.progress || {});
       } catch (error) {
         console.error(
-          "❌ Failed to load roadmap progress:",
+          "❌ Failed to load roadmap:",
           error
         );
+
+        setCompleted({});
       } finally {
         setLoading(false);
       }
     };
 
     loadProgress();
-  }, []);
+  }, [user]);
 
   // ==========================================
-  // SAVE ROADMAP PROGRESS TO BACKEND
+  // SAVE ROADMAP TO FIRESTORE
   // ==========================================
 
   useEffect(() => {
     const saveProgress = async () => {
-      try {
-        const user = auth.currentUser;
+      // IMPORTANT:
+      // Do not save while Firebase data is loading.
+      if (!user || loading) {
+        return;
+      }
 
-        if (!user) {
-          return;
-        }
+      try {
+        setSaving(true);
 
         const token = await user.getIdToken();
 
         const response = await fetch(
-          "https://pathforge-4-iwk7.onrender.com/api/user/roadmap",
+          `${API_URL}/api/user/roadmap`,
           {
             method: "PUT",
             headers: {
@@ -102,23 +128,21 @@ function CareerRoadmap() {
         }
 
         console.log(
-          "💾 Roadmap progress saved:",
+          "💾 Roadmap saved to Firebase:",
           data
         );
       } catch (error) {
         console.error(
-          "❌ Failed to save roadmap progress:",
+          "❌ Failed to save roadmap:",
           error
         );
+      } finally {
+        setSaving(false);
       }
     };
 
-    // Don't save empty progress
-    // when the page first loads.
-    if (Object.keys(completed).length > 0) {
-      saveProgress();
-    }
-  }, [completed]);
+    saveProgress();
+  }, [completed, user, loading]);
 
   // ==========================================
   // TOGGLE SKILL
@@ -169,9 +193,35 @@ function CareerRoadmap() {
         </h1>
 
         <div className="bg-slate-900 rounded-xl p-6">
+
           <p className="text-gray-400">
             Loading roadmap progress...
           </p>
+
+        </div>
+
+      </div>
+    );
+  }
+
+  // ==========================================
+  // NO USER
+  // ==========================================
+
+  if (!user) {
+    return (
+      <div className="p-8">
+
+        <h1 className="text-4xl font-bold text-cyan-400 mb-8">
+          Career Roadmap
+        </h1>
+
+        <div className="bg-slate-900 rounded-xl p-6">
+
+          <p className="text-gray-400">
+            Please log in to view your roadmap.
+          </p>
+
         </div>
 
       </div>
@@ -190,6 +240,14 @@ function CareerRoadmap() {
       <h1 className="text-4xl font-bold text-cyan-400 mb-8">
         Career Roadmap
       </h1>
+
+      {/* SAVE STATUS */}
+
+      {saving && (
+        <p className="text-xs text-gray-500 mb-4">
+          Saving progress...
+        </p>
+      )}
 
       {/* TABS */}
 
@@ -365,4 +423,3 @@ function CareerRoadmap() {
 }
 
 export default CareerRoadmap;
-

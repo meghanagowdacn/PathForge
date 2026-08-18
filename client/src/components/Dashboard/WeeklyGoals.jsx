@@ -1,103 +1,273 @@
+import { useEffect, useState } from "react";
+import { auth } from "../../firebase/firebase";
 
-import { useState } from "react";
+const API_URL = "https://pathforge-4-iwk7.onrender.com";
 
 function WeeklyGoals() {
-  const [goals, setGoals] = useState([
-    {
-      id: 1,
-      title: "Learn React",
-      progress: 80,
-    },
-    {
-      id: 2,
-      title: "Build AI Resume Analyzer",
-      progress: 100,
-    },
-    {
-      id: 3,
-      title: "Complete Firebase",
-      progress: 45,
-    },
-    {
-      id: 4,
-      title: "DSA Practice",
-      progress: 65,
-    },
-  ]);
-
+  const [goals, setGoals] = useState([]);
   const [newGoal, setNewGoal] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // ==========================================
+  // LOAD GOALS FROM FIRESTORE
+  // ==========================================
+
+  const loadGoals = async () => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        console.log("No logged-in user");
+        setLoading(false);
+        return;
+      }
+
+      const token = await user.getIdToken();
+
+      const response = await fetch(
+        `${API_URL}/api/user/weekly-goals`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("Weekly goals loaded:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to load weekly goals"
+        );
+      }
+
+      setGoals(data.goals || []);
+    } catch (error) {
+      console.error("Load weekly goals error:", error);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadGoals();
+  }, []);
 
   // ==========================================
   // ADD GOAL
   // ==========================================
 
-  const addGoal = () => {
-    if (!newGoal.trim()) {
+  const addGoal = async () => {
+    if (!newGoal.trim() || saving) {
       return;
     }
 
-    const goal = {
-      id: Date.now(),
-      title: newGoal.trim(),
-      progress: 0,
-    };
+    try {
+      setSaving(true);
 
-    setGoals((previousGoals) => [
-      ...previousGoals,
-      goal,
-    ]);
+      const user = auth.currentUser;
 
-    setNewGoal("");
+      if (!user) {
+        alert("Please login first.");
+        return;
+      }
+
+      const token = await user.getIdToken();
+
+      const response = await fetch(
+        `${API_URL}/api/user/weekly-goals`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: newGoal.trim(),
+            progress: 0,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("Weekly goal added:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to add weekly goal"
+        );
+      }
+
+      // Firestore-created goal
+      setGoals((previousGoals) => [
+        ...previousGoals,
+        data.goal,
+      ]);
+
+      setNewGoal("");
+
+      alert("Weekly goal added successfully! ✅");
+    } catch (error) {
+      console.error("Add weekly goal error:", error);
+      alert(error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ==========================================
   // UPDATE PROGRESS
   // ==========================================
 
-  const updateProgress = (id, value) => {
+  const updateProgress = async (id, value) => {
+    const progress = Number(value);
+
+    // Update UI immediately
     setGoals((previousGoals) =>
       previousGoals.map((goal) =>
         goal.id === id
           ? {
               ...goal,
-              progress: Number(value),
+              progress,
             }
           : goal
       )
     );
+
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        alert("Please login first.");
+
+        // Reload correct Firebase data
+        await loadGoals();
+
+        return;
+      }
+
+      const token = await user.getIdToken();
+
+      const response = await fetch(
+        `${API_URL}/api/user/weekly-goals/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            progress,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("Weekly goal updated:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to update goal"
+        );
+      }
+    } catch (error) {
+      console.error("Update weekly goal error:", error);
+
+      alert(error.message);
+
+      // Get original data back from Firestore
+      await loadGoals();
+    }
   };
 
   // ==========================================
   // DELETE GOAL
   // ==========================================
 
-  const deleteGoal = (id) => {
-    setGoals((previousGoals) =>
-      previousGoals.filter(
-        (goal) => goal.id !== id
-      )
-    );
+  const deleteGoal = async (id) => {
+    try {
+      const user = auth.currentUser;
+
+      if (!user) {
+        alert("Please login first.");
+        return;
+      }
+
+      const token = await user.getIdToken();
+
+      const response = await fetch(
+        `${API_URL}/api/user/weekly-goals/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("Weekly goal deleted:", data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to delete goal"
+        );
+      }
+
+      // Remove from screen after successful Firestore deletion
+      setGoals((previousGoals) =>
+        previousGoals.filter(
+          (goal) => goal.id !== id
+        )
+      );
+
+      alert("Weekly goal deleted successfully! ✅");
+    } catch (error) {
+      console.error("Delete weekly goal error:", error);
+      alert(error.message);
+    }
   };
 
   // ==========================================
-  // GOAL STATISTICS
+  // STATISTICS
   // ==========================================
 
-  const completedGoals =
-    goals.filter(
-      (goal) => goal.progress === 100
-    ).length;
+  const completedGoals = goals.filter(
+    (goal) => Number(goal.progress || 0) === 100
+  ).length;
 
   const averageProgress =
     goals.length > 0
       ? Math.round(
           goals.reduce(
             (total, goal) =>
-              total + goal.progress,
+              total + Number(goal.progress || 0),
             0
           ) / goals.length
         )
       : 0;
+
+  // ==========================================
+  // LOADING
+  // ==========================================
+
+  if (loading) {
+    return (
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-lg mt-10">
+        <p className="text-gray-400">
+          Loading weekly goals...
+        </p>
+      </div>
+    );
+  }
 
   // ==========================================
   // UI
@@ -120,8 +290,7 @@ function WeeklyGoals() {
           </h2>
 
           <p className="text-gray-500 text-sm mt-2">
-            Set goals, track your progress, and
-            stay consistent.
+            Set goals, track your progress, and stay consistent.
           </p>
         </div>
 
@@ -160,7 +329,6 @@ function WeeklyGoals() {
           </div>
 
         </div>
-
       </div>
 
       {/* ADD GOAL */}
@@ -185,10 +353,10 @@ function WeeklyGoals() {
         <button
           type="button"
           onClick={addGoal}
-          disabled={!newGoal.trim()}
+          disabled={!newGoal.trim() || saving}
           className="bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-bold px-6 py-3 rounded-xl transition"
         >
-          + Add Goal
+          {saving ? "Adding..." : "+ Add Goal"}
         </button>
 
       </div>
@@ -196,6 +364,7 @@ function WeeklyGoals() {
       {/* GOALS */}
 
       {goals.length === 0 ? (
+
         <div className="border border-dashed border-slate-700 rounded-xl p-10 text-center">
 
           <div className="text-4xl mb-3">
@@ -211,7 +380,9 @@ function WeeklyGoals() {
           </p>
 
         </div>
+
       ) : (
+
         <div className="space-y-4">
 
           {goals.map((goal) => (
@@ -229,12 +400,12 @@ function WeeklyGoals() {
 
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      goal.progress === 100
+                      Number(goal.progress || 0) === 100
                         ? "bg-green-500/10"
                         : "bg-cyan-500/10"
                     }`}
                   >
-                    {goal.progress === 100
+                    {Number(goal.progress || 0) === 100
                       ? "✓"
                       : "🎯"}
                   </div>
@@ -243,7 +414,7 @@ function WeeklyGoals() {
 
                     <h3
                       className={`font-semibold break-words ${
-                        goal.progress === 100
+                        Number(goal.progress || 0) === 100
                           ? "text-gray-400 line-through"
                           : "text-white"
                       }`}
@@ -252,7 +423,7 @@ function WeeklyGoals() {
                     </h3>
 
                     <p className="text-xs text-gray-500 mt-1">
-                      {goal.progress === 100
+                      {Number(goal.progress || 0) === 100
                         ? "Goal completed"
                         : "Keep pushing forward"}
                     </p>
@@ -264,7 +435,7 @@ function WeeklyGoals() {
                 <div className="flex items-center gap-3 shrink-0">
 
                   <span className="text-cyan-400 font-bold">
-                    {goal.progress}%
+                    {Number(goal.progress || 0)}%
                   </span>
 
                   <button
@@ -290,12 +461,18 @@ function WeeklyGoals() {
 
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
-                      goal.progress === 100
+                      Number(goal.progress || 0) === 100
                         ? "bg-green-400"
                         : "bg-cyan-400"
                     }`}
                     style={{
-                      width: `${goal.progress}%`,
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          0,
+                          Number(goal.progress || 0)
+                        )
+                      )}%`,
                     }}
                   />
 
@@ -315,7 +492,9 @@ function WeeklyGoals() {
                   type="range"
                   min="0"
                   max="100"
-                  value={goal.progress}
+                  value={Number(
+                    goal.progress || 0
+                  )}
                   onChange={(e) =>
                     updateProgress(
                       goal.id,
@@ -336,6 +515,7 @@ function WeeklyGoals() {
           ))}
 
         </div>
+
       )}
 
     </div>

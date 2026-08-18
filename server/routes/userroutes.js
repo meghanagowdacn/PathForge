@@ -1,9 +1,9 @@
-
 const express = require("express");
 
 const {
   getUserProfile,
   updateUserProfile,
+
   getProjects,
   addProject,
   deleteProject,
@@ -19,11 +19,20 @@ const {
 
   getRoadmapProgress,
   saveRoadmapProgress,
+
+  getWeeklyGoals,
+  addWeeklyGoal,
+  updateWeeklyGoal,
+  deleteWeeklyGoal,
+
+  getResumeAnalysis,
+  saveResumeAnalysis,
 } = require("../controllers/usercontroller");
 
 const verifyToken = require("../middleware/authMiddleware");
 
 const router = express.Router();
+
 
 // ==========================================
 // USER PROFILE
@@ -34,11 +43,13 @@ router.get(
   verifyToken,
   getUserProfile
 );
+
 router.put(
   "/profile",
   verifyToken,
   updateUserProfile
 );
+
 
 // ==========================================
 // PROJECTS
@@ -62,6 +73,7 @@ router.delete(
   deleteProject
 );
 
+
 // ==========================================
 // SKILLS
 // ==========================================
@@ -83,6 +95,7 @@ router.delete(
   verifyToken,
   deleteSkill
 );
+
 
 // ==========================================
 // TASKS
@@ -112,8 +125,9 @@ router.delete(
   deleteTask
 );
 
+
 // ==========================================
-// ROADMAP
+// CAREER ROADMAP
 // ==========================================
 
 router.get(
@@ -127,5 +141,52 @@ router.put(
   verifyToken,
   saveRoadmapProgress
 );
+
+
+// ==========================================
+// WEEKLY GOALS
+// ==========================================
+
+router.get(
+  "/weekly-goals",
+  verifyToken,
+  getWeeklyGoals
+);
+
+router.post(
+  "/weekly-goals",
+  verifyToken,
+  addWeeklyGoal
+);
+
+router.put(
+  "/weekly-goals/:goalId",
+  verifyToken,
+  updateWeeklyGoal
+);
+
+router.delete(
+  "/weekly-goals/:goalId",
+  verifyToken,
+  deleteWeeklyGoal
+);
+
+
+// ==========================================
+// RESUME ANALYZER
+// ==========================================
+
+router.get(
+  "/resume",
+  verifyToken,
+  getResumeAnalysis
+);
+
+router.post(
+  "/resume",
+  verifyToken,
+  saveResumeAnalysis
+);
+
 
 module.exports = router;

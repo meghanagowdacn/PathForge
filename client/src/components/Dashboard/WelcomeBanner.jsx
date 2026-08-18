@@ -1,6 +1,6 @@
 import { auth } from "../../firebase/firebase";
 
-function WelcomeBanner() {
+function WelcomeBanner({ currentStreak = 0 }) {
   const user = auth.currentUser;
 
   const today = new Date();
@@ -17,7 +17,7 @@ function WelcomeBanner() {
     "Keep learning, keep growing.",
     "Every expert was once a beginner.",
     "Consistency beats motivation.",
-    "One project at a time."
+    "One project at a time.",
   ];
 
   const quote =
@@ -27,7 +27,7 @@ function WelcomeBanner() {
     <div className="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-xl p-8 text-white shadow-lg">
 
       <h1 className="text-4xl font-bold">
-        Welcome, {user?.email?.split("@")[0]} 
+        Welcome, {user?.email?.split("@")[0]}
       </h1>
 
       <p className="mt-2 text-lg">
@@ -42,7 +42,7 @@ function WelcomeBanner() {
           </p>
 
           <h2 className="text-3xl font-bold">
-            7 Days
+            {currentStreak} Days
           </h2>
         </div>
 

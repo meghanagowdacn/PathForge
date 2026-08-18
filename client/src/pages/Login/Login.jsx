@@ -26,7 +26,7 @@ function Login() {
       const idToken = await user.getIdToken();
 
       const profileResponse = await fetch(
-        "http://localhost:5000/api/user/profile",
+        "https://pathforge-4-iwk7.onrender.com/api/user/profile",
         {
           method: "GET",
           headers: {

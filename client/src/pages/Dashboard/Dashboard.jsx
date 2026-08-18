@@ -1,4 +1,3 @@
-
 import { auth } from "../../firebase/firebase";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -15,8 +14,9 @@ function Dashboard() {
   const [stats, setStats] = useState({
     projects: 0,
     skills: 0,
-    resumeScore: 82,
+    resumeScore: 0,
     tasks: 0,
+    studyStreak: 0,
   });
 
   // ==========================================
@@ -165,13 +165,17 @@ function Dashboard() {
       // 5. RESUME SCORE
       // ==========================================
 
+      // Each Firebase user gets their own
+      // resume data in localStorage.
       const resume =
         JSON.parse(
-          localStorage.getItem("resume")
+          localStorage.getItem(
+            `resume_${user.uid}`
+          )
         ) || {};
 
       const resumeScore =
-        resume.score || 82;
+        resume.score || 0;
 
       // ==========================================
       // 6. UPDATE STATS
@@ -182,6 +186,9 @@ function Dashboard() {
         skills: skillCount,
         resumeScore,
         tasks: taskCount,
+
+        // New users start with 0 streak.
+        studyStreak: 0,
       };
 
       console.log(
@@ -190,6 +197,7 @@ function Dashboard() {
       );
 
       setStats(finalStats);
+
     } catch (error) {
       console.error(
         "❌ Dashboard data error:",
@@ -319,6 +327,7 @@ function Dashboard() {
       ========================================== */}
 
       <div className="mb-8">
+
         <p className="text-cyan-400 text-sm font-semibold mb-2">
           PATHFORGE DASHBOARD
         </p>
@@ -328,7 +337,6 @@ function Dashboard() {
           {userProfile?.name
             ? `, ${userProfile.name}`
             : ""}{" "}
-          
         </h1>
 
         {userProfile?.email && (
@@ -341,6 +349,7 @@ function Dashboard() {
           Track your progress, build your skills,
           and move closer to your career goals.
         </p>
+
       </div>
 
       {/* ==========================================
@@ -348,7 +357,9 @@ function Dashboard() {
       ========================================== */}
 
       <div className="mb-8">
-        <WelcomeBanner />
+        <WelcomeBanner
+          currentStreak={stats.studyStreak}
+        />
       </div>
 
       {/* ==========================================
@@ -358,6 +369,7 @@ function Dashboard() {
       <div className="grid xl:grid-cols-4 md:grid-cols-2 gap-5 mb-10">
 
         {dashboardStats.map((item) => (
+
           <div
             key={item.title}
             className={`bg-slate-900/80 border ${item.border} rounded-2xl p-6 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300`}
@@ -366,7 +378,7 @@ function Dashboard() {
             <div className="flex items-center justify-between">
 
               <div
-                className={`w-11 h-11 rounded-xl bg-slate-800 flex items-center justify-center text-xl`}
+                className="w-11 h-11 rounded-xl bg-slate-800 flex items-center justify-center text-xl"
               >
                 {item.icon}
               </div>
@@ -377,6 +389,7 @@ function Dashboard() {
                   "bg-"
                 )}`}
               />
+
             </div>
 
             <h2 className="text-sm font-medium text-gray-400 mt-5">
@@ -394,6 +407,7 @@ function Dashboard() {
             </p>
 
           </div>
+
         ))}
 
       </div>
@@ -421,7 +435,12 @@ function Dashboard() {
       ========================================== */}
 
       <div className="mb-10">
-        <AchievementCards />
+        <AchievementCards
+          studyStreak={stats.studyStreak}
+          skillsCount={stats.skills}
+          projectsCount={stats.projects}
+          resumeScore={stats.resumeScore}
+        />
       </div>
 
       {/* ==========================================
@@ -439,6 +458,7 @@ function Dashboard() {
       <div className="mt-12">
 
         <div className="mb-6">
+
           <p className="text-cyan-400 text-sm font-semibold">
             EXPLORE PATHFORGE
           </p>
@@ -450,11 +470,13 @@ function Dashboard() {
           <p className="text-gray-500 mt-2">
             Jump directly to the tools you need.
           </p>
+
         </div>
 
         <div className="grid xl:grid-cols-3 md:grid-cols-2 gap-5">
 
           {actions.map((action) => (
+
             <Link
               key={action.path}
               to={action.path}
@@ -482,6 +504,7 @@ function Dashboard() {
               </p>
 
             </Link>
+
           ))}
 
         </div>
@@ -493,4 +516,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-

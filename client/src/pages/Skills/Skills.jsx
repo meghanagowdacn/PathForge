@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
+
+const API_URL =
+  "https://pathforge-4-iwk7.onrender.com/api/user/skills";
 
 function Skills() {
   const [skills, setSkills] = useState([]);
@@ -13,33 +17,41 @@ function Skills() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-
   // ==========================================
-  // LOAD SKILLS
+  // LOAD SKILLS FROM FIREBASE
   // ==========================================
 
-  const loadSkills = async () => {
+  const loadSkills = async (user) => {
     try {
-      const user = auth.currentUser;
-
       if (!user) {
-        console.log("No logged-in user found");
+        console.log("No Firebase user logged in");
+
+        setSkills([]);
+        setLoading(false);
         return;
       }
 
       const idToken = await user.getIdToken();
 
-      const response = await fetch(
-        "https://pathforge-4-iwk7.onrender.com/api/user/skills",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
+      const response = await fetch(API_URL, {
+        method: "GET",
 
-      const data = await response.json();
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          "Server returned an invalid response. Please check that the backend is running."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -47,36 +59,61 @@ function Skills() {
         );
       }
 
-      console.log("Skills loaded:", data);
+      console.log(
+        "Skills loaded from Firebase:",
+        data
+      );
 
       setSkills(data.skills || []);
-
     } catch (error) {
       console.error("Load skills error:", error);
       alert(error.message);
-
     } finally {
       setLoading(false);
     }
   };
 
+  // ==========================================
+  // WAIT FOR FIREBASE LOGIN
+  // ==========================================
 
   useEffect(() => {
-    loadSkills();
-  }, []);
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (user) {
+          console.log(
+            "Logged-in Firebase user:",
+            user.email
+          );
 
+          loadSkills(user);
+        } else {
+          console.log(
+            "No Firebase user logged in"
+          );
+
+          setSkills([]);
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   // ==========================================
   // HANDLE INPUT
   // ==========================================
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
+    const { name, value } = e.target;
 
+    setForm((previousForm) => ({
+      ...previousForm,
+      [name]: value,
+    }));
+  };
 
   // ==========================================
   // ADD SKILL
@@ -100,21 +137,32 @@ function Skills() {
 
       const idToken = await user.getIdToken();
 
-      const response = await fetch(
-        "https://pathforge-4-iwk7.onrender.com/api/user/skills",
-        {
-          method: "POST",
+      const response = await fetch(API_URL, {
+        method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
 
-          body: JSON.stringify(form),
-        }
-      );
+        body: JSON.stringify({
+          name: form.name.trim(),
+          level: form.level,
+          status: form.status,
+        }),
+      });
 
-      const data = await response.json();
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          "Server returned an invalid response. Please check your backend."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -122,13 +170,18 @@ function Skills() {
         );
       }
 
-      console.log("Skill added:", data);
+      console.log(
+        "Skill successfully saved to Firebase:",
+        data
+      );
 
+      // Add Firebase skill to the UI
       setSkills((previousSkills) => [
         ...previousSkills,
         data.skill,
       ]);
 
+      // Clear form
       setForm({
         name: "",
         level: "Beginner",
@@ -136,16 +189,13 @@ function Skills() {
       });
 
       alert("Skill added successfully! ✅");
-
     } catch (error) {
       console.error("Add skill error:", error);
       alert(error.message);
-
     } finally {
       setSaving(false);
     }
   };
-
 
   // ==========================================
   // DELETE SKILL
@@ -160,10 +210,18 @@ function Skills() {
         return;
       }
 
+      const confirmDelete = window.confirm(
+        "Are you sure you want to delete this skill?"
+      );
+
+      if (!confirmDelete) {
+        return;
+      }
+
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        `https://pathforge-4-iwk7.onrender.com/api/user/skills/${id}`,
+        `${API_URL}/${id}`,
         {
           method: "DELETE",
 
@@ -173,7 +231,17 @@ function Skills() {
         }
       );
 
-      const data = await response.json();
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          "Server returned an invalid response."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -181,8 +249,12 @@ function Skills() {
         );
       }
 
-      console.log("Skill deleted:", data);
+      console.log(
+        "Skill deleted from Firebase:",
+        data
+      );
 
+      // Remove from UI
       setSkills((previousSkills) =>
         previousSkills.filter(
           (skill) => skill.id !== id
@@ -190,13 +262,15 @@ function Skills() {
       );
 
       alert("Skill deleted successfully! ✅");
-
     } catch (error) {
-      console.error("Delete skill error:", error);
+      console.error(
+        "Delete skill error:",
+        error
+      );
+
       alert(error.message);
     }
   };
-
 
   // ==========================================
   // LOADING
@@ -210,7 +284,6 @@ function Skills() {
     );
   }
 
-
   // ==========================================
   // UI
   // ==========================================
@@ -218,22 +291,25 @@ function Skills() {
   return (
     <div>
 
+      {/* PAGE TITLE */}
+
       <h1 className="text-4xl font-bold text-cyan-400 mb-8">
         Skills Tracker
       </h1>
 
-
-      {/* Add Skill */}
+      {/* ==========================================
+          ADD SKILL
+      ========================================== */}
 
       <div className="bg-slate-900 rounded-xl p-6 mb-10">
 
-        <h2 className="text-2xl font-bold mb-6">
+        <h2 className="text-2xl font-bold text-white mb-6">
           Add Skill
         </h2>
 
         <div className="grid md:grid-cols-3 gap-4">
 
-          {/* Skill Name */}
+          {/* SKILL NAME */}
 
           <input
             type="text"
@@ -241,52 +317,71 @@ function Skills() {
             placeholder="Skill Name"
             value={form.name}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-cyan-400"
           />
 
-
-          {/* Level */}
+          {/* LEVEL */}
 
           <select
             name="level"
             value={form.level}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white outline-none focus:ring-2 focus:ring-cyan-400"
           >
-            <option>Beginner</option>
-            <option>Intermediate</option>
-            <option>Advanced</option>
+            <option value="Beginner">
+              Beginner
+            </option>
+
+            <option value="Intermediate">
+              Intermediate
+            </option>
+
+            <option value="Advanced">
+              Advanced
+            </option>
           </select>
 
-
-          {/* Status */}
+          {/* STATUS */}
 
           <select
             name="status"
             value={form.status}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white outline-none focus:ring-2 focus:ring-cyan-400"
           >
-            <option>Learning</option>
-            <option>Practicing</option>
-            <option>Completed</option>
+            <option value="Learning">
+              Learning
+            </option>
+
+            <option value="Practicing">
+              Practicing
+            </option>
+
+            <option value="Completed">
+              Completed
+            </option>
           </select>
 
         </div>
 
+        {/* ADD BUTTON */}
 
         <button
+          type="button"
           onClick={addSkill}
           disabled={saving}
-          className="mt-6 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-black px-6 py-3 rounded-lg font-bold"
+          className="mt-6 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-6 py-3 rounded-lg font-bold transition"
         >
-          {saving ? "Adding..." : "Add Skill"}
+          {saving
+            ? "Saving to Firebase..."
+            : "Add Skill"}
         </button>
 
       </div>
 
-
-      {/* Skills List */}
+      {/* ==========================================
+          SKILLS LIST
+      ========================================== */}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
@@ -306,31 +401,37 @@ function Skills() {
 
             <div
               key={skill.id}
-              className="bg-slate-900 rounded-xl p-6 shadow-lg"
+              className="bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-800"
             >
 
-              <h2 className="text-2xl font-bold">
+              {/* SKILL NAME */}
+
+              <h2 className="text-2xl font-bold text-white">
                 {skill.name}
               </h2>
 
+              {/* LEVEL */}
 
-              <p className="mt-2 text-gray-300">
+              <p className="mt-3 text-gray-300">
                 <strong>Level:</strong>{" "}
                 {skill.level}
               </p>
 
+              {/* STATUS */}
 
               <p className="mt-2 text-gray-300">
                 <strong>Status:</strong>{" "}
                 {skill.status}
               </p>
 
+              {/* DELETE */}
 
               <button
+                type="button"
                 onClick={() =>
                   deleteSkill(skill.id)
                 }
-                className="mt-5 bg-red-500 hover:bg-red-600 px-5 py-2 rounded-lg"
+                className="mt-5 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg transition"
               >
                 Delete
               </button>

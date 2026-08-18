@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
+
+const API_URL =
+  "https://pathforge-4-iwk7.onrender.com/api/user/projects";
 
 function Projects() {
   const [projects, setProjects] = useState([]);
@@ -16,31 +20,38 @@ function Projects() {
   const [saving, setSaving] = useState(false);
 
   // ==========================================
-  // LOAD PROJECTS
+  // LOAD PROJECTS FROM FIREBASE
   // ==========================================
 
-  const loadProjects = async () => {
+  const loadProjects = async (user) => {
     try {
-      const user = auth.currentUser;
-
       if (!user) {
-        console.log("No logged-in user found");
+        setProjects([]);
+        setLoading(false);
         return;
       }
 
       const idToken = await user.getIdToken();
 
-      const response = await fetch(
-        "https://pathforge-4-iwk7.onrender.com/api/user/projects",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
+      const response = await fetch(API_URL, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
 
-      const data = await response.json();
+      // Get response safely
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          "Server returned an invalid response. Please check that the backend is running."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -48,10 +59,9 @@ function Projects() {
         );
       }
 
-      console.log("Projects loaded:", data);
+      console.log("Projects loaded from Firebase:", data);
 
       setProjects(data.projects || []);
-
     } catch (error) {
       console.error("Load projects error:", error);
       alert(error.message);
@@ -60,33 +70,58 @@ function Projects() {
     }
   };
 
+  // ==========================================
+  // WAIT FOR FIREBASE LOGIN
+  // ==========================================
 
   useEffect(() => {
-    loadProjects();
-  }, []);
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        if (user) {
+          console.log(
+            "Logged-in Firebase user:",
+            user.email
+          );
 
+          loadProjects(user);
+        } else {
+          console.log("No Firebase user logged in");
+
+          setProjects([]);
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   // ==========================================
   // HANDLE INPUT
   // ==========================================
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
+    const { name, value } = e.target;
 
+    setForm((previousForm) => ({
+      ...previousForm,
+      [name]: value,
+    }));
+  };
 
   // ==========================================
   // ADD PROJECT
   // ==========================================
 
   const addProject = async () => {
-    if (!form.title.trim() || !form.tech.trim()) {
-      alert(
-        "Please fill in Project Name and Technologies."
-      );
+    if (!form.title.trim()) {
+      alert("Please enter the project name.");
+      return;
+    }
+
+    if (!form.tech.trim()) {
+      alert("Please enter the technologies used.");
       return;
     }
 
@@ -102,19 +137,34 @@ function Projects() {
 
       const idToken = await user.getIdToken();
 
-      const response = await fetch(
-        "https://pathforge-4-iwk7.onrender.com/api/user/projects",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify(form),
-        }
-      );
+      const response = await fetch(API_URL, {
+        method: "POST",
 
-      const data = await response.json();
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+
+        body: JSON.stringify({
+          title: form.title.trim(),
+          tech: form.tech.trim(),
+          github: form.github.trim(),
+          demo: form.demo.trim(),
+          status: form.status,
+        }),
+      });
+
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          "Server returned an invalid response. Please check your backend."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -122,11 +172,14 @@ function Projects() {
         );
       }
 
-      console.log("Project added:", data);
+      console.log(
+        "Project successfully saved to Firebase:",
+        data
+      );
 
-      // Add newly created project to UI
-      setProjects((prevProjects) => [
-        ...prevProjects,
+      // Add returned Firebase project to UI
+      setProjects((previousProjects) => [
+        ...previousProjects,
         data.project,
       ]);
 
@@ -140,7 +193,6 @@ function Projects() {
       });
 
       alert("Project added successfully! ✅");
-
     } catch (error) {
       console.error("Add project error:", error);
       alert(error.message);
@@ -148,7 +200,6 @@ function Projects() {
       setSaving(false);
     }
   };
-
 
   // ==========================================
   // DELETE PROJECT
@@ -163,19 +214,38 @@ function Projects() {
         return;
       }
 
+      const confirmDelete = window.confirm(
+        "Are you sure you want to delete this project?"
+      );
+
+      if (!confirmDelete) {
+        return;
+      }
+
       const idToken = await user.getIdToken();
 
       const response = await fetch(
-        `https://pathforge-4-iwk7.onrender.com/api/user/projects/${id}`,
+        `${API_URL}/${id}`,
         {
           method: "DELETE",
+
           headers: {
             Authorization: `Bearer ${idToken}`,
           },
         }
       );
 
-      const data = await response.json();
+      const text = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          "Server returned an invalid response."
+        );
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -183,23 +253,24 @@ function Projects() {
         );
       }
 
-      console.log("Project deleted:", data);
+      console.log(
+        "Project deleted from Firebase:",
+        data
+      );
 
-      // Remove project from UI
-      setProjects((prevProjects) =>
-        prevProjects.filter(
+      // Remove from UI
+      setProjects((previousProjects) =>
+        previousProjects.filter(
           (project) => project.id !== id
         )
       );
 
       alert("Project deleted successfully! ✅");
-
     } catch (error) {
       console.error("Delete project error:", error);
       alert(error.message);
     }
   };
-
 
   // ==========================================
   // LOADING
@@ -213,30 +284,30 @@ function Projects() {
     );
   }
 
-
   // ==========================================
   // UI
   // ==========================================
 
   return (
     <div>
+      {/* PAGE TITLE */}
 
       <h1 className="text-4xl font-bold text-cyan-400 mb-8">
         My Projects
       </h1>
 
-
-      {/* Add Project */}
+      {/* ==========================================
+          ADD PROJECT FORM
+      ========================================== */}
 
       <div className="bg-slate-900 rounded-xl p-6 mb-10">
-
-        <h2 className="text-2xl font-bold mb-5">
+        <h2 className="text-2xl font-bold text-white mb-5">
           Add New Project
         </h2>
 
         <div className="grid md:grid-cols-2 gap-4">
 
-          {/* Project Name */}
+          {/* PROJECT NAME */}
 
           <input
             type="text"
@@ -244,11 +315,10 @@ function Projects() {
             placeholder="Project Name"
             value={form.title}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-cyan-400"
           />
 
-
-          {/* Technologies */}
+          {/* TECHNOLOGIES */}
 
           <input
             type="text"
@@ -256,11 +326,10 @@ function Projects() {
             placeholder="Technologies Used"
             value={form.tech}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-cyan-400"
           />
 
-
-          {/* GitHub */}
+          {/* GITHUB */}
 
           <input
             type="text"
@@ -268,11 +337,10 @@ function Projects() {
             placeholder="GitHub Link"
             value={form.github}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-cyan-400"
           />
 
-
-          {/* Demo */}
+          {/* LIVE DEMO */}
 
           <input
             type="text"
@@ -280,78 +348,79 @@ function Projects() {
             placeholder="Live Demo Link"
             value={form.demo}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white placeholder-gray-500 outline-none focus:ring-2 focus:ring-cyan-400"
           />
 
-
-          {/* Status */}
+          {/* STATUS */}
 
           <select
             name="status"
             value={form.status}
             onChange={handleChange}
-            className="p-3 rounded bg-slate-800 text-white"
+            className="p-3 rounded bg-slate-800 text-white outline-none focus:ring-2 focus:ring-cyan-400"
           >
-            <option>Completed</option>
-            <option>In Progress</option>
-          </select>
+            <option value="Completed">
+              Completed
+            </option>
 
+            <option value="In Progress">
+              In Progress
+            </option>
+          </select>
         </div>
 
+        {/* ADD BUTTON */}
 
         <button
+          type="button"
           onClick={addProject}
           disabled={saving}
-          className="mt-6 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-black px-6 py-3 rounded-lg font-bold"
+          className="mt-6 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-black px-6 py-3 rounded-lg font-bold transition"
         >
-          {saving ? "Adding..." : "Add Project"}
+          {saving ? "Saving to Firebase..." : "Add Project"}
         </button>
-
       </div>
 
-
-      {/* Project List */}
+      {/* ==========================================
+          PROJECT LIST
+      ========================================== */}
 
       <div className="grid lg:grid-cols-2 gap-6">
-
         {projects.length === 0 ? (
-
           <div className="bg-slate-900 rounded-xl p-6">
-
             <h2 className="text-xl text-gray-400">
               No projects added yet.
             </h2>
-
           </div>
-
         ) : (
-
           projects.map((project) => (
-
             <div
               key={project.id}
-              className="bg-slate-900 rounded-xl p-6 shadow-lg"
+              className="bg-slate-900 rounded-xl p-6 shadow-lg border border-slate-800"
             >
+              {/* TITLE */}
 
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-white">
                 {project.title}
               </h2>
 
+              {/* TECHNOLOGY */}
 
               <p className="text-gray-400 mt-2">
                 {project.tech}
               </p>
 
+              {/* STATUS */}
 
-              <p className="mt-3">
+              <p className="mt-3 text-gray-300">
                 <strong>Status:</strong>{" "}
                 {project.status}
               </p>
 
+              {/* GITHUB */}
 
               {project.github && (
                 <p className="mt-2">
-
                   <a
                     href={project.github}
                     target="_blank"
@@ -360,14 +429,13 @@ function Projects() {
                   >
                     GitHub Repository
                   </a>
-
                 </p>
               )}
 
+              {/* DEMO */}
 
               {project.demo && (
                 <p className="mt-2">
-
                   <a
                     href={project.demo}
                     target="_blank"
@@ -376,28 +444,24 @@ function Projects() {
                   >
                     Live Demo
                   </a>
-
                 </p>
               )}
 
+              {/* DELETE */}
 
               <button
+                type="button"
                 onClick={() =>
                   deleteProject(project.id)
                 }
-                className="mt-6 bg-red-500 hover:bg-red-600 px-5 py-2 rounded-lg"
+                className="mt-6 bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg transition"
               >
                 Delete
               </button>
-
             </div>
-
           ))
-
         )}
-
       </div>
-
     </div>
   );
 }

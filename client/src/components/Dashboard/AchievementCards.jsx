@@ -1,9 +1,13 @@
-
-function AchievementCards() {
+function AchievementCards({
+  studyStreak = 0,
+  skillsCount = 0,
+  projectsCount = 0,
+  resumeScore = 0,
+}) {
   const achievements = [
     {
       title: "Study Streak",
-      value: "7 Days",
+      value: `${studyStreak} Days`,
       icon: "🔥",
       description: "Keep learning every day",
       gradient:
@@ -17,7 +21,7 @@ function AchievementCards() {
     },
     {
       title: "Skills Learned",
-      value: "12",
+      value: skillsCount,
       icon: "⚡",
       description: "Skills added to your profile",
       gradient:
@@ -31,7 +35,7 @@ function AchievementCards() {
     },
     {
       title: "Projects",
-      value: "5",
+      value: projectsCount,
       icon: "🚀",
       description: "Projects built and completed",
       gradient:
@@ -45,7 +49,7 @@ function AchievementCards() {
     },
     {
       title: "Resume Score",
-      value: "82%",
+      value: `${resumeScore}%`,
       icon: "📄",
       description: "Current resume strength",
       gradient:
