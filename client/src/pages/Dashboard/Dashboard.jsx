@@ -1,4 +1,5 @@
-import { auth } from "../../firebase/firebase";
+import { auth, db } from "../../firebase/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
@@ -162,20 +163,42 @@ function Dashboard() {
         tasksData.tasks?.length || 0;
 
       // ==========================================
-      // 5. RESUME SCORE
-      // ==========================================
+// 5. RESUME SCORE FROM FIREBASE
+// ==========================================
 
-      // Each Firebase user gets their own
-      // resume data in localStorage.
-      const resume =
-        JSON.parse(
-          localStorage.getItem(
-            `resume_${user.uid}`
-          )
-        ) || {};
+let resumeScore = 0;
 
-      const resumeScore =
-        resume.score || 0;
+try {
+  const resumeRef = doc(
+    db,
+    "users",
+    user.uid,
+    "resume",
+    "analysis"
+  );
+
+  const resumeSnapshot = await getDoc(resumeRef);
+
+  if (resumeSnapshot.exists()) {
+    const resumeData = resumeSnapshot.data();
+
+    resumeScore = Number(resumeData.score) || 0;
+
+    console.log(
+      "📄 Resume score from Firebase:",
+      resumeScore
+    );
+  } else {
+    console.log(
+      "ℹ️ No resume analysis found yet."
+    );
+  }
+} catch (resumeError) {
+  console.error(
+    "❌ Failed to load resume score:",
+    resumeError
+  );
+}
 
       // ==========================================
       // 6. UPDATE STATS
