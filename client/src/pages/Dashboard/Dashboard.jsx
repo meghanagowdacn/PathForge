@@ -1,5 +1,5 @@
 import { auth, db } from "../../firebase/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
@@ -19,6 +19,128 @@ function Dashboard() {
     tasks: 0,
     studyStreak: 0,
   });
+
+  // ==========================================
+  // GET TODAY'S DATE
+  // ==========================================
+
+  const getTodayDate = () => {
+    const today = new Date();
+
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // ==========================================
+  // GET YESTERDAY'S DATE
+  // ==========================================
+
+  const getYesterdayDate = () => {
+    const yesterday = new Date();
+
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const year = yesterday.getFullYear();
+    const month = String(yesterday.getMonth() + 1).padStart(2, "0");
+    const day = String(yesterday.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // ==========================================
+  // UPDATE STUDY STREAK IN FIREBASE
+  // ==========================================
+
+  const updateStudyStreak = async (user) => {
+    try {
+      if (!user) {
+        return 0;
+      }
+
+      const userRef = doc(db, "users", user.uid);
+
+      const userSnapshot = await getDoc(userRef);
+
+      const today = getTodayDate();
+      const yesterday = getYesterdayDate();
+
+      let currentStreak = 0;
+      let lastActiveDate = null;
+
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.data();
+
+        currentStreak = Number(userData.studyStreak) || 0;
+        lastActiveDate = userData.lastActiveDate || null;
+      }
+
+      // ==========================================
+      // FIRST TIME USING STREAK
+      // ==========================================
+
+      if (!lastActiveDate) {
+        currentStreak = 1;
+      }
+
+      // ==========================================
+      // ALREADY ACTIVE TODAY
+      // ==========================================
+
+      else if (lastActiveDate === today) {
+        // Do not increase the streak again
+        // if the user refreshes or opens Dashboard
+        // multiple times on the same day.
+
+        currentStreak = Math.max(currentStreak, 1);
+      }
+
+      // ==========================================
+      // ACTIVE YESTERDAY
+      // ==========================================
+
+      else if (lastActiveDate === yesterday) {
+        currentStreak = currentStreak + 1;
+      }
+
+      // ==========================================
+      // MISSED ONE OR MORE DAYS
+      // ==========================================
+
+      else {
+        currentStreak = 1;
+      }
+
+      // ==========================================
+      // SAVE STREAK TO FIREBASE
+      // ==========================================
+
+      await setDoc(
+        userRef,
+        {
+          studyStreak: currentStreak,
+          lastActiveDate: today,
+        },
+        {
+          merge: true,
+        }
+      );
+
+      console.log("🔥 Study streak:", currentStreak);
+      console.log("📅 Last active date:", today);
+
+      return currentStreak;
+    } catch (error) {
+      console.error(
+        "❌ Failed to update study streak:",
+        error
+      );
+
+      return 0;
+    }
+  };
 
   // ==========================================
   // LOAD ALL DASHBOARD DATA
@@ -55,7 +177,8 @@ function Dashboard() {
 
       if (!profileResponse.ok) {
         throw new Error(
-          profileData.message || "Failed to load profile"
+          profileData.message ||
+            "Failed to load profile"
         );
       }
 
@@ -163,45 +286,55 @@ function Dashboard() {
         tasksData.tasks?.length || 0;
 
       // ==========================================
-// 5. RESUME SCORE FROM FIREBASE
-// ==========================================
+      // 5. RESUME SCORE FROM FIREBASE
+      // ==========================================
 
-let resumeScore = 0;
+      let resumeScore = 0;
 
-try {
-  const resumeRef = doc(
-    db,
-    "users",
-    user.uid,
-    "resume",
-    "analysis"
-  );
+      try {
+        const resumeRef = doc(
+          db,
+          "users",
+          user.uid,
+          "resume",
+          "analysis"
+        );
 
-  const resumeSnapshot = await getDoc(resumeRef);
+        const resumeSnapshot =
+          await getDoc(resumeRef);
 
-  if (resumeSnapshot.exists()) {
-    const resumeData = resumeSnapshot.data();
+        if (resumeSnapshot.exists()) {
+          const resumeData =
+            resumeSnapshot.data();
 
-    resumeScore = Number(resumeData.score) || 0;
+          resumeScore =
+            Number(resumeData.score) || 0;
 
-    console.log(
-      "📄 Resume score from Firebase:",
-      resumeScore
-    );
-  } else {
-    console.log(
-      "ℹ️ No resume analysis found yet."
-    );
-  }
-} catch (resumeError) {
-  console.error(
-    "❌ Failed to load resume score:",
-    resumeError
-  );
-}
+          console.log(
+            "📄 Resume score from Firebase:",
+            resumeScore
+          );
+        } else {
+          console.log(
+            "ℹ️ No resume analysis found yet."
+          );
+        }
+      } catch (resumeError) {
+        console.error(
+          "❌ Failed to load resume score:",
+          resumeError
+        );
+      }
 
       // ==========================================
-      // 6. UPDATE STATS
+      // 6. STUDY STREAK FROM FIREBASE
+      // ==========================================
+
+      const studyStreak =
+        await updateStudyStreak(user);
+
+      // ==========================================
+      // 7. UPDATE STATS
       // ==========================================
 
       const finalStats = {
@@ -209,9 +342,7 @@ try {
         skills: skillCount,
         resumeScore,
         tasks: taskCount,
-
-        // New users start with 0 streak.
-        studyStreak: 0,
+        studyStreak,
       };
 
       console.log(
@@ -220,7 +351,6 @@ try {
       );
 
       setStats(finalStats);
-
     } catch (error) {
       console.error(
         "❌ Dashboard data error:",
