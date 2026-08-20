@@ -104,7 +104,7 @@ function AIResumeAnalyzer() {
       );
 
       const response = await fetch(
-        "http://localhost:5000/api/user/resume",
+        "https://pathforge-backend-83wc.onrender.com/api/user/resume"
         {
           method: "POST",
 
