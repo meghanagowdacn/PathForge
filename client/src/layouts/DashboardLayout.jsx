@@ -9,7 +9,7 @@ function DashboardLayout() {
       <DashboardSidebar />
 
       {/* Main Content */}
-      <main className="ml-64 flex-1 p-8 transition-colors duration-300">
+      <main className="md:ml-64 flex-1 p-8 transition-colors duration-300">
         <Outlet />
       </main>
 
